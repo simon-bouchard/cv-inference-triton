@@ -1,0 +1,21 @@
+# Model weights
+*.pt
+*.onnx
+*.engine
+*.plan
+
+# Triton cache
+model_repository/**/1/*.onnx
+model_repository/**/1/*.engine
+
+# Python
+__pycache__/
+*.pyc
+.env
+
+# Data
+data/*
+!data/.gitkeep
+
+# Jupyter
+.ipynb_checkpoints/
