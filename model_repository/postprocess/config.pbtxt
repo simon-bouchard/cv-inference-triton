@@ -1,0 +1,35 @@
+name: "postprocess"
+backend: "python"
+max_batch_size: 0
+
+input [
+  {
+    name: "output0"
+    data_type: TYPE_FP32
+    dims: [1, 84, 8400]
+  }
+]
+
+output [
+  {
+    name: "boxes"
+    data_type: TYPE_FP32
+    dims: [-1, 4]
+  }
+  {
+    name: "scores"
+    data_type: TYPE_FP32
+    dims: [-1]
+  }
+  {
+    name: "class_ids"
+    data_type: TYPE_INT32
+    dims: [-1]
+  }
+]
+
+instance_group [
+  {
+    kind: KIND_CPU
+  }
+]
