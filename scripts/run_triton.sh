@@ -1,6 +1,6 @@
 #!/bin/bash
 
-docker run --rm -d \
+docker run --rm \
   --gpus all \
   --shm-size=512m \
   -p 8000:8000 \

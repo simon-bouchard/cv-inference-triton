@@ -22,3 +22,6 @@ data/*
 
 # Dev
 .envrc
+
+# Results
+benchmarks/results/
