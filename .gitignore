@@ -24,4 +24,4 @@ data/*
 .envrc
 
 # Results
-benchmarks/results/
+benchmarks/**/results/
