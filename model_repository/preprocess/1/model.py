@@ -15,8 +15,8 @@ class TritonPythonModel:
 
             img = Image.open(io.BytesIO(image_bytes)).convert("RGB").resize((640, 640))
             arr = np.array(img).astype(np.float32) / 255.0
-            arr = arr.transpose(2, 0, 1)           # HWC → CHW
-            arr = np.expand_dims(arr, axis=0)      # [1, 3, 640, 640]
+            arr = arr.transpose(2, 0, 1)
+            arr = np.expand_dims(arr, axis=0)
 
             out = pb_utils.Tensor("images", arr)
             responses.append(pb_utils.InferenceResponse(output_tensors=[out]))
