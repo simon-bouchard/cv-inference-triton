@@ -15,12 +15,12 @@ output [
     name: "boxes"
     data_type: TYPE_FP32
     dims: [-1, 4]
-  }
+  },
   {
     name: "scores"
     data_type: TYPE_FP32
     dims: [-1]
-  }
+  },
   {
     name: "class_ids"
     data_type: TYPE_INT32
