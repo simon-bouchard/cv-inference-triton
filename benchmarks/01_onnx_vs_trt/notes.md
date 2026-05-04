@@ -58,6 +58,7 @@ Doubling Python instances doubled throughput, confirming GIL as the bottleneck. 
 - Python pre/postprocess is the current bottleneck, not the GPU
 - The GPU is underutilised at ~33 inf/s — capacity exists for additional models
 - Next bottleneck to address: Python overhead (C++ backend) or GPU utilisation (dynamic batching for multi-model scenarios)
+- gRPC vs HTTP shows no measurable difference at current throughput levels — protocol overhead is negligible compared to Python pre/postprocess latency. Worth retesting after C++ backend implementation.
 
 ## Hardware
 - GPU: GTX 1060 3GB
