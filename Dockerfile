@@ -2,6 +2,9 @@
 FROM nvcr.io/nvidia/tritonserver:23.08-py3 AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    software-properties-common \
+  && add-apt-repository universe \
+  && apt-get update && apt-get install -y --no-install-recommends \
     cmake \
     build-essential \
     libturbojpeg0-dev \
@@ -19,6 +22,9 @@ RUN pip install pillow
 
 # libturbojpeg0 is the runtime-only package (no headers, much smaller).
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    software-properties-common \
+  && add-apt-repository universe \
+  && apt-get update && apt-get install -y --no-install-recommends \
     libturbojpeg0 \
   && rm -rf /var/lib/apt/lists/*
 
