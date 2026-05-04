@@ -3,6 +3,7 @@ import triton_python_backend_utils as pb_utils
 from PIL import Image
 import io
 
+
 class TritonPythonModel:
     def initialize(self, args):
         pass
