@@ -1,7 +1,13 @@
-#include "triton/backend/backend_common.h"
-#include "triton/backend/backend_model.h"
-#include "triton/backend/backend_model_instance.h"
+#include "triton/core/tritonbackend.h"
+#include "triton/core/tritonserver.h"
 
+#define RETURN_IF_ERROR(X)                    \
+    do {                                      \
+        TRITONSERVER_Error* rie_ = (X);       \
+        if (rie_ != nullptr) return rie_;     \
+    } while (false)
+
+#include <cstdio>
 #include <jpeglib.h>
 #include <setjmp.h>
 #include <cmath>
@@ -189,7 +195,7 @@ TRITONBACKEND_ModelInstanceExecute(
                 TRITONSERVER_MemoryType out_mtype = TRITONSERVER_MEMORY_CPU;
                 int64_t out_mid = 0;
                 proc_err = TRITONBACKEND_OutputBuffer(
-                    output, &out_buf, &out_bytes, &out_mtype, &out_mid);
+                    output, &out_buf, out_bytes, &out_mtype, &out_mid);
 
                 if (!proc_err) {
                     try {
