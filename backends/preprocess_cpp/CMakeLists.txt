@@ -10,7 +10,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(TRITON_INCLUDE_DIR "/opt/tritonserver/include"
     CACHE PATH "Path to Triton server include directory")
 
-find_library(TURBOJPEG_LIB turbojpeg REQUIRED)
+find_library(JPEG_LIB jpeg REQUIRED)
 
 add_library(triton_preprocess_cpp SHARED preprocess.cpp)
 
@@ -19,7 +19,7 @@ target_include_directories(triton_preprocess_cpp PRIVATE
 )
 
 target_link_libraries(triton_preprocess_cpp PRIVATE
-    ${TURBOJPEG_LIB}
+    ${JPEG_LIB}
 )
 
 set_target_properties(triton_preprocess_cpp PROPERTIES

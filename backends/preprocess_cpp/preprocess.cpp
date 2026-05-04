@@ -2,7 +2,8 @@
 #include "triton/backend/backend_model.h"
 #include "triton/backend/backend_model_instance.h"
 
-#include <turbojpeg.h>
+#include <jpeglib.h>
+#include <setjmp.h>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
@@ -13,31 +14,54 @@
 static constexpr int OUT_W = 640;
 static constexpr int OUT_H = 640;
 
+// libjpeg error handler that throws instead of calling exit().
+struct JpegErrorMgr {
+    jpeg_error_mgr pub;
+    jmp_buf jmp;
+    char msg[JMSG_LENGTH_MAX];
+};
+
+static void jpeg_error_exit(j_common_ptr cinfo)
+{
+    auto* err = reinterpret_cast<JpegErrorMgr*>(cinfo->err);
+    (*cinfo->err->format_message)(cinfo, err->msg);
+    longjmp(err->jmp, 1);
+}
+
 // Decode JPEG bytes to an RGB HWC uint8 buffer.
 static std::vector<uint8_t>
 decode_jpeg(const uint8_t* data, size_t len, int& out_w, int& out_h)
 {
-    tjhandle tj = tjInitDecompress();
-    if (!tj)
-        throw std::runtime_error("tjInitDecompress failed");
+    jpeg_decompress_struct cinfo;
+    JpegErrorMgr jerr;
+    cinfo.err = jpeg_std_error(&jerr.pub);
+    jerr.pub.error_exit = jpeg_error_exit;
 
-    int subsamp, colorspace;
-    if (tjDecompressHeader3(tj, data, static_cast<unsigned long>(len),
-                            &out_w, &out_h, &subsamp, &colorspace) < 0) {
-        std::string msg = std::string("JPEG header: ") + tjGetErrorStr2(tj);
-        tjDestroy(tj);
-        throw std::runtime_error(msg);
+    if (setjmp(jerr.jmp)) {
+        jpeg_destroy_decompress(&cinfo);
+        throw std::runtime_error(std::string("JPEG decode: ") + jerr.msg);
     }
+
+    jpeg_create_decompress(&cinfo);
+    jpeg_mem_src(&cinfo, data, static_cast<unsigned long>(len));
+    jpeg_read_header(&cinfo, TRUE);
+
+    cinfo.out_color_space = JCS_RGB;
+    jpeg_start_decompress(&cinfo);
+
+    out_w = static_cast<int>(cinfo.output_width);
+    out_h = static_cast<int>(cinfo.output_height);
 
     std::vector<uint8_t> rgb(out_w * out_h * 3);
-    if (tjDecompress2(tj, data, static_cast<unsigned long>(len),
-                      rgb.data(), out_w, 0, out_h, TJPF_RGB, TJFLAG_FASTDCT) < 0) {
-        std::string msg = std::string("JPEG decode: ") + tjGetErrorStr2(tj);
-        tjDestroy(tj);
-        throw std::runtime_error(msg);
+
+    while (static_cast<int>(cinfo.output_scanline) < out_h) {
+        uint8_t* row = rgb.data() + cinfo.output_scanline * out_w * 3;
+        jpeg_read_scanlines(&cinfo, &row, 1);
     }
 
-    tjDestroy(tj);
+    jpeg_finish_decompress(&cinfo);
+    jpeg_destroy_decompress(&cinfo);
+
     return rgb;
 }
 
