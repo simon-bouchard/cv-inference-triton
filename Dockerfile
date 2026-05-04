@@ -5,6 +5,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     cmake \
     build-essential \
     libjpeg-turbo8-dev \
+  && ln -s /usr/lib/x86_64-linux-gnu/libturbojpeg.so.0 \
+           /usr/lib/x86_64-linux-gnu/libturbojpeg.so \
   && rm -rf /var/lib/apt/lists/*
 
 COPY backends/preprocess_cpp /build/preprocess_cpp
