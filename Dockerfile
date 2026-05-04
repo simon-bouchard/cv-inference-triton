@@ -2,12 +2,9 @@
 FROM nvcr.io/nvidia/tritonserver:23.08-py3 AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    software-properties-common \
-  && add-apt-repository universe \
-  && apt-get update && apt-get install -y --no-install-recommends \
     cmake \
     build-essential \
-    libturbojpeg0-dev \
+    libjpeg-turbo8-dev \
   && rm -rf /var/lib/apt/lists/*
 
 COPY backends/preprocess_cpp /build/preprocess_cpp
@@ -20,12 +17,9 @@ FROM nvcr.io/nvidia/tritonserver:23.08-py3
 # Python backend (preprocess, postprocess) still needs Pillow.
 RUN pip install pillow
 
-# libturbojpeg0 is the runtime-only package (no headers, much smaller).
+# libjpeg-turbo8 is the runtime-only package (no headers, much smaller).
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    software-properties-common \
-  && add-apt-repository universe \
-  && apt-get update && apt-get install -y --no-install-recommends \
-    libturbojpeg0 \
+    libjpeg-turbo8 \
   && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /opt/tritonserver/backends/preprocess_cpp
