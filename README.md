@@ -117,18 +117,21 @@ No meaningful gain. Peak throughput is virtually identical and single-request la
 ## Bottleneck progression
 
 ```
-Start:  Pipeline capped at 75 inf/s while GPU alone does 88 inf/s
-        → Python GIL in preprocess is the ceiling
+Exp 01: ONNX pipeline:  59 inf/s,  35.6ms latency @c=1
+        TRT pipeline:   75 inf/s,  36.2ms latency @c=1  (+27% throughput vs ONNX)
+        GPU alone:      88 inf/s
+        → TRT helps but Python GIL in preprocess prevents the GPU from reaching capacity
 
-Exp 02: C++ preprocess removes the GIL
-        → Pipeline now reaches 79 inf/s, matching the GPU ceiling
+Exp 02: TRT + C++ preprocess:  79 inf/s,  25.0ms latency @c=1
+        → Removing the GIL cuts latency by 31% and closes the gap to the GPU ceiling
+        → Preprocess is no longer the bottleneck — GPU is
 
-Exp 03: Dynamic batching shows no gain
+Exp 03: Dynamic batching on the GPU shows no gain
         → GPU is genuinely saturated at batch=1, not just appearing to be
         → Only a faster GPU can push throughput higher
 ```
 
-This is the intended outcome: the most expensive hardware resource (GPU) should be the limiting factor, not CPU software overhead.
+From first pipeline to final: **+34% throughput** (59 → 79 inf/s) and **-30% latency** (35.6 → 25.0ms). The most expensive hardware resource (GPU) is now the limiting factor, not CPU software overhead.
 
 ## Benchmark summary
 
