@@ -12,7 +12,7 @@ input [{
 output [{
   name: "output0"
   data_type: TYPE_FP32
-  dims: [84, 8400]
+  dims: [84, -1]
 }]
 
 instance_group [{
