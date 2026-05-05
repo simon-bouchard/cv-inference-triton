@@ -30,6 +30,7 @@ parser.add_argument("--protocol", default="http", choices=["http", "grpc"])
 parser.add_argument("--concurrency", default="1", help="Single value or start:end")
 parser.add_argument("--duration", default=30, type=int, help="Seconds per concurrency level")
 parser.add_argument("--output", default=None, help="Path to output CSV file")
+parser.add_argument("--outputs", default="boxes,scores,class_ids", help="Comma-separated output tensor names")
 args = parser.parse_args()
 
 # ── concurrency range ─────────────────────────────────────────────────────────
@@ -68,11 +69,7 @@ def make_inputs(client_lib):
 
 
 def make_outputs(client_lib):
-    return [
-        client_lib.InferRequestedOutput("boxes"),
-        client_lib.InferRequestedOutput("scores"),
-        client_lib.InferRequestedOutput("class_ids"),
-    ]
+    return [client_lib.InferRequestedOutput(name) for name in args.outputs.split(",")]
 
 
 # ── worker ────────────────────────────────────────────────────────────────────
