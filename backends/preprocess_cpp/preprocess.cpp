@@ -71,24 +71,39 @@ decode_jpeg(const uint8_t* data, size_t len, int& out_w, int& out_h)
     return rgb;
 }
 
-// Bilinear resize + normalize to [0,1] + HWC→CHW in a single pass.
+// Letterbox + bilinear resize + normalize to [0,1] + HWC→CHW.
+// Preserves aspect ratio by scaling to fit within OUT_W×OUT_H and padding
+// the remainder with YOLOv8's expected grey (114/255).
 // src: H×W×3 uint8  →  dst: 1×3×OUT_H×OUT_W float32
-static void resize_normalize_chw(
+static constexpr float PAD_VAL = 114.f / 255.f;
+
+static void letterbox_normalize_chw(
     const uint8_t* src, int sw, int sh, float* dst)
 {
-    const float sx = static_cast<float>(sw) / OUT_W;
-    const float sy = static_cast<float>(sh) / OUT_H;
+    const float scale = std::min(static_cast<float>(OUT_W) / sw,
+                                 static_cast<float>(OUT_H) / sh);
+    const int new_w = static_cast<int>(sw * scale);
+    const int new_h = static_cast<int>(sh * scale);
+    const int pad_x = (OUT_W - new_w) / 2;
+    const int pad_y = (OUT_H - new_h) / 2;
 
-    for (int oy = 0; oy < OUT_H; ++oy) {
-        float fy = (oy + 0.5f) * sy - 0.5f;
+    std::fill(dst, dst + 3 * OUT_H * OUT_W, PAD_VAL);
+
+    const float sx = static_cast<float>(sw) / new_w;
+    const float sy = static_cast<float>(sh) / new_h;
+
+    for (int oy = pad_y; oy < pad_y + new_h; ++oy) {
+        float fy = (oy - pad_y + 0.5f) * sy - 0.5f;
         int y0 = static_cast<int>(std::floor(fy));
         int y1 = y0 + 1;
         float yw = fy - static_cast<float>(y0);
         y0 = (y0 < 0) ? 0 : (y0 >= sh ? sh - 1 : y0);
         y1 = (y1 < 0) ? 0 : (y1 >= sh ? sh - 1 : y1);
+        const uint8_t* r0 = src + y0 * sw * 3;
+        const uint8_t* r1 = src + y1 * sw * 3;
 
-        for (int ox = 0; ox < OUT_W; ++ox) {
-            float fx = (ox + 0.5f) * sx - 0.5f;
+        for (int ox = pad_x; ox < pad_x + new_w; ++ox) {
+            float fx = (ox - pad_x + 0.5f) * sx - 0.5f;
             int x0 = static_cast<int>(std::floor(fx));
             int x1 = x0 + 1;
             float xw = fx - static_cast<float>(x0);
@@ -96,10 +111,10 @@ static void resize_normalize_chw(
             x1 = (x1 < 0) ? 0 : (x1 >= sw ? sw - 1 : x1);
 
             for (int c = 0; c < 3; ++c) {
-                float p00 = src[(y0 * sw + x0) * 3 + c];
-                float p01 = src[(y0 * sw + x1) * 3 + c];
-                float p10 = src[(y1 * sw + x0) * 3 + c];
-                float p11 = src[(y1 * sw + x1) * 3 + c];
+                float p00 = r0[x0 * 3 + c];
+                float p01 = r0[x1 * 3 + c];
+                float p10 = r1[x0 * 3 + c];
+                float p11 = r1[x1 * 3 + c];
                 float v = (1.f - yw) * ((1.f - xw) * p00 + xw * p01)
                         +        yw  * ((1.f - xw) * p10 + xw * p11);
                 dst[c * OUT_H * OUT_W + oy * OUT_W + ox] = v / 255.0f;
@@ -199,7 +214,7 @@ TRITONBACKEND_ModelInstanceExecute(
 
                 if (!proc_err) {
                     try {
-                        resize_normalize_chw(
+                        letterbox_normalize_chw(
                             rgb.data(), img_w, img_h,
                             static_cast<float*>(out_buf));
                     } catch (const std::exception& ex) {
