@@ -25,6 +25,4 @@ target_link_libraries(triton_preprocess_cpp PRIVATE
 set_target_properties(triton_preprocess_cpp PROPERTIES
     OUTPUT_NAME "triton_preprocess_cpp"
     PREFIX "lib"
-    CXX_VISIBILITY_PRESET hidden
-    VISIBILITY_INLINES_HIDDEN YES
 )
