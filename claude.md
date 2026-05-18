@@ -46,7 +46,7 @@ Trained on COCO128. Full preprocess → model → postprocess ensemble pipeline,
 ### geoclassifier-v1 — Quebec Region Classification
 Fine-tuned EfficientNet-V2-M (ImageNet pretrained) that classifies street-level photos into one of Quebec's 17 administrative regions. Trained on ~750 Mapillary images per region (notebook: `training/geoclassifier-1.ipynb`). Val accuracy: 90.8%, test accuracy: 88.8%.
 
-Exported to ONNX FP16, opset 17. Weights go in `model_repository/geoclassifier/1/model.onnx` (gitignored, download from W&B).
+Exported to ONNX FP32, opset 17, fully static shapes. Weights go in `model_repository/geoclassifier/1/model.onnx` (gitignored, download from W&B).
 
 - Input: `input` [1, 3, 480, 480] FP32
 - Output: `output` [1, 17] FP32 (raw logits)
@@ -75,8 +75,9 @@ Exported to ONNX FP16, opset 17. Weights go in `model_repository/geoclassifier/1
 |---|-------|--------|
 | 01 | ONNX vs TensorRT FP16 | Done |
 | 02 | C++ preprocess backend | Done |
-| 03 | Dynamic batching | In progress |
-| 04 | Multi-model deployment (yolov8s + geoclassifier) | Planned |
+| 03 | Dynamic batching | Done |
+| 04 | Geoclassifier: ONNX vs TensorRT FP16 | Done |
+| 05 | Multi-model deployment (yolov8s + geoclassifier) | Planned |
 
 ## How to Help
 - Be hands-on and specific — working configs, commands, and code over explanations

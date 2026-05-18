@@ -25,3 +25,6 @@ data/*
 
 # Results
 benchmarks/**/results/
+
+# Training
+training

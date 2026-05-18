@@ -21,10 +21,18 @@ Learning project focused on deploying computer vision models with NVIDIA Triton 
 |-------|---------|-------------|
 | `yolov8s` | ONNX Runtime | YOLOv8s object detection |
 | `yolov8s_trt` | TensorRT FP16 | TRT-optimised version |
-| `preprocess` | Python | JPEG bytes → normalised tensor |
+| `preprocess` | Python | JPEG bytes → normalised tensor (640×640) |
+| `preprocess_cpp` | C++ | Same as above, no Python GIL |
 | `postprocess` | Python | Raw output → boxes/scores/class_ids with NMS |
 | `yolov8s_pipeline` | Ensemble | preprocess → yolov8s → postprocess |
 | `yolov8s_trt_pipeline` | Ensemble | preprocess → yolov8s_trt → postprocess |
+| `yolov8s_trt_pipeline_cpp` | Ensemble | preprocess_cpp → yolov8s_trt → postprocess |
+| `geoclassifier` | ONNX Runtime FP32 | EfficientNet-V2-M, 17 Quebec regions |
+| `geoclassifier_trt` | TensorRT FP16 | TRT-optimised version |
+| `geoclassifier_preprocess_cpp` | C++ | JPEG bytes → resize 512 → crop 480 → ImageNet norm |
+| `geoclassifier_postprocess` | Python | Logits → label + confidence |
+| `geoclassifier_pipeline` | Ensemble | geoclassifier_preprocess_cpp → geoclassifier → geoclassifier_postprocess |
+| `geoclassifier_trt_pipeline` | Ensemble | geoclassifier_preprocess_cpp → geoclassifier_trt → geoclassifier_postprocess |
 
 ## Benchmark summary
 
@@ -38,16 +46,22 @@ Each row is one configuration. Latency and throughput measured end-to-end from c
 | 01 | pipeline | TRT FP16 | off | 1 | 73ms | 78ms | 17 inf/s | c=2 |
 | 01 | pipeline | ONNX | off | 2 | 78ms | 90ms | 33 inf/s | c=3 |
 | 01 | pipeline | TRT FP16 | off | 2 | 75ms | 79ms | 33 inf/s | c=3 |
+| 04 | model | ONNX FP32 | off | 1 | 42ms | 43ms | 26 inf/s | c=2 |
+| 04 | model | TRT FP16 | off | 1 | 46ms | 49ms | 35 inf/s | c=2 |
+| 04 | pipeline | ONNX FP32 | off | 1 | 46ms | 47ms | 26 inf/s | c=2 |
+| 04 | pipeline | TRT FP16 | off | 1 | 58ms | 62ms | 31 inf/s | c=3 |
 
-> Full results and analysis in `benchmarks/01_onnx_vs_trt/notes.md`
+> Full results and analysis in `benchmarks/01_onnx_vs_trt/notes.md` and `benchmarks/04_geoclassifier/notes.md`
 
 ## Experiments
 
 | # | Topic | Status |
 |---|-------|--------|
 | 01 | ONNX vs TensorRT FP16 | ✅ Done |
-| 02 | Dynamic batching | 🔜 Next |
-| 03 | Multi-model deployment | 🔜 Planned |
+| 02 | C++ preprocess backend | ✅ Done |
+| 03 | Dynamic batching | ✅ Done |
+| 04 | Geoclassifier: ONNX vs TensorRT FP16 | ✅ Done |
+| 05 | Multi-model deployment (yolov8s + geoclassifier) | 🔜 Planned |
 
 ## Benchmarking
 
