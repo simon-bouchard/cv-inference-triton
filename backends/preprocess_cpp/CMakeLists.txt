@@ -26,3 +26,18 @@ set_target_properties(triton_preprocess_cpp PROPERTIES
     OUTPUT_NAME "triton_preprocess_cpp"
     PREFIX "lib"
 )
+
+add_library(triton_preprocess_classifier SHARED preprocess_classifier.cpp)
+
+target_include_directories(triton_preprocess_classifier PRIVATE
+    ${TRITON_INCLUDE_DIR}
+)
+
+target_link_libraries(triton_preprocess_classifier PRIVATE
+    ${JPEG_LIB}
+)
+
+set_target_properties(triton_preprocess_classifier PROPERTIES
+    OUTPUT_NAME "triton_preprocess_classifier"
+    PREFIX "lib"
+)

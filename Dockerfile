@@ -26,3 +26,8 @@ RUN mkdir -p /opt/tritonserver/backends/preprocess_cpp
 COPY --from=builder \
     /build/preprocess_cpp/libtriton_preprocess_cpp.so \
     /opt/tritonserver/backends/preprocess_cpp/
+
+RUN mkdir -p /opt/tritonserver/backends/preprocess_classifier
+COPY --from=builder \
+    /build/preprocess_cpp/libtriton_preprocess_classifier.so \
+    /opt/tritonserver/backends/preprocess_classifier/
