@@ -1,0 +1,31 @@
+name: "geoclassifier_postprocess"
+backend: "python"
+max_batch_size: 0
+
+input [
+  {
+    name: "logits"
+    data_type: TYPE_FP32
+    dims: [1, 17]
+  }
+]
+
+output [
+  {
+    name: "label"
+    data_type: TYPE_STRING
+    dims: [1]
+  },
+  {
+    name: "confidence"
+    data_type: TYPE_FP32
+    dims: [1]
+  }
+]
+
+instance_group [
+  {
+    kind: KIND_CPU
+    count: 2
+  }
+]

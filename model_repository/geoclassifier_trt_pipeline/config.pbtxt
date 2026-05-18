@@ -1,0 +1,48 @@
+name: "geoclassifier_trt_pipeline"
+platform: "ensemble"
+max_batch_size: 0
+
+input [
+  {
+    name: "image_raw"
+    data_type: TYPE_STRING
+    dims: [1]
+  }
+]
+
+output [
+  {
+    name: "label"
+    data_type: TYPE_STRING
+    dims: [1]
+  },
+  {
+    name: "confidence"
+    data_type: TYPE_FP32
+    dims: [1]
+  }
+]
+
+ensemble_scheduling {
+  step [
+    {
+      model_name: "geoclassifier_preprocess_cpp"
+      model_version: 1
+      input_map  { key: "image_raw"    value: "image_raw" }
+      output_map { key: "image_tensor" value: "image_tensor" }
+    },
+    {
+      model_name: "geoclassifier_trt"
+      model_version: 1
+      input_map  { key: "input"   value: "image_tensor" }
+      output_map { key: "output"  value: "logits" }
+    },
+    {
+      model_name: "geoclassifier_postprocess"
+      model_version: 1
+      input_map  { key: "logits"     value: "logits" }
+      output_map { key: "label"      value: "label" }
+      output_map { key: "confidence" value: "confidence" }
+    }
+  ]
+}

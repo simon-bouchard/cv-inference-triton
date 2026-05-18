@@ -1,0 +1,26 @@
+name: "geoclassifier_preprocess_cpp"
+backend: "preprocess_classifier"
+max_batch_size: 0
+
+input [
+  {
+    name: "image_raw"
+    data_type: TYPE_STRING
+    dims: [1]
+  }
+]
+
+output [
+  {
+    name: "image_tensor"
+    data_type: TYPE_FP32
+    dims: [1, 3, 480, 480]
+  }
+]
+
+instance_group [
+  {
+    kind: KIND_CPU
+    count: 2
+  }
+]
