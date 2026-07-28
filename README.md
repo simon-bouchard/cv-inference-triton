@@ -51,25 +51,6 @@ The input format (JPEG over HTTP) reflects a realistic industrial camera scenari
 | `geoclassifier_pipeline` | Ensemble | geoclassifier_preprocess_cpp → geoclassifier → geoclassifier_postprocess |
 | `geoclassifier_trt_pipeline` | Ensemble | geoclassifier_preprocess_cpp → geoclassifier_trt → geoclassifier_postprocess |
 
-## Benchmark summary
-
-Each row is one configuration. Latency and throughput measured end-to-end from client perspective.
-
-| Exp | Scope | Backend | Batching | Instances | p50 @c=1 | p99 @c=1 | Peak throughput | Saturates at |
-|-----|-------|---------|----------|-----------|----------|----------|-----------------|--------------|
-| 01 | model | ONNX | off | 1 | 26ms | 29ms | 58 inf/s | c=2 |
-| 01 | model | TRT FP16 | off | 1 | 22ms | 28ms | 88 inf/s | c=3 |
-| 01 | pipeline | ONNX | off | 1 | 78ms | 85ms | 17 inf/s | c=2 |
-| 01 | pipeline | TRT FP16 | off | 1 | 73ms | 78ms | 17 inf/s | c=2 |
-| 01 | pipeline | ONNX | off | 2 | 78ms | 90ms | 33 inf/s | c=3 |
-| 01 | pipeline | TRT FP16 | off | 2 | 75ms | 79ms | 33 inf/s | c=3 |
-| 04 | model | ONNX FP32 | off | 1 | 42ms | 43ms | 26 inf/s | c=2 |
-| 04 | model | TRT FP16 | off | 1 | 46ms | 49ms | 35 inf/s | c=2 |
-| 04 | pipeline | ONNX FP32 | off | 1 | 46ms | 47ms | 26 inf/s | c=2 |
-| 04 | pipeline | TRT FP16 | off | 1 | 58ms | 62ms | 31 inf/s | c=3 |
-
-> Full results and analysis in `benchmarks/01_onnx_vs_trt/notes.md` and `benchmarks/04_geoclassifier/notes.md`
-
 ## Experiments
 
 | # | Topic | Status |
@@ -79,9 +60,6 @@ Each row is one configuration. Latency and throughput measured end-to-end from c
 | 03 | Dynamic batching | ✅ Done |
 | 04 | Geoclassifier: ONNX vs TensorRT FP16 | ✅ Done |
 | 05 | Multi-model deployment (yolov8s + geoclassifier) | 🔜 Planned |
-=======
-
-## Experiments
 
 ### Exp 01 — ONNX vs TensorRT FP16
 
@@ -150,6 +128,32 @@ No meaningful gain. Peak throughput is virtually identical and single-request la
 
 ---
 
+### Exp 04 — Geoclassifier: ONNX vs TensorRT FP16
+
+**What:** Repeated the ONNX vs TensorRT comparison on a second, unrelated model — `geoclassifier`, an EfficientNet-V2-M classifier fine-tuned to identify Quebec's 17 administrative regions from street-level photos. Pipeline: C++ preprocess (resize 512 → center-crop 480 → ImageNet normalize) → model → Python postprocess (softmax → argmax, no NMS).
+
+**Model-only results** (GPU compute isolated):
+
+| Model | p50 @c=1 | p99 @c=1 | GPU infer time | Peak throughput |
+|-------|----------|----------|----------------|-----------------|
+| geoclassifier (ONNX FP32) | 42ms | 43ms | 37ms | 26 inf/s |
+| geoclassifier_trt (TRT FP16) | 46ms | 49ms | 28ms | 35 inf/s |
+
+TRT's GPU compute time is 25% faster (28ms vs 37ms), but total latency at c=1 is 9% *slower* (46ms vs 42ms) — TRT carries more fixed per-request overhead (CUDA context, server I/O) that only amortises under load. Peak throughput is 35% higher with TRT.
+
+**Pipeline results:**
+
+| Pipeline | p50 @c=1 | p99 @c=1 | Peak throughput | Saturates at |
+|----------|----------|----------|-----------------|--------------|
+| geoclassifier_pipeline (ONNX) | 46ms | 47ms | 26 inf/s | c=2 |
+| geoclassifier_trt_pipeline (TRT FP16) | 58ms | 62ms | 31 inf/s | c=3 |
+
+The TRT advantage carries through end-to-end (31 vs 26 inf/s peak) even though it's slower for single requests. Pre/postprocess adds almost no overhead — only 4ms on top of the ONNX model-only latency.
+
+**Why the single-request regression matters:** unlike YOLOv8s, converting this model to TRT required three separate compatibility fixes (IR version downgrade, `onnxsim`, re-export at opset 12) — EfficientNet-V2's squeeze-excitation blocks aren't cleanly supported by TRT 8.6's ONNX importer. Combined with Pascal's (compute 6.1) more modest FP16 gains, TRT is the right choice under load, but ONNX Runtime is better for latency-sensitive single-request serving of this model.
+
+---
+
 ## Bottleneck progression
 
 ```
@@ -169,6 +173,8 @@ Exp 03: Dynamic batching on the GPU shows no gain
 
 From first pipeline to final: **+34% throughput** (59 → 79 inf/s) and **-30% latency** (35.6 → 25.0ms). The most expensive hardware resource (GPU) is now the limiting factor, not CPU software overhead.
 
+(This progression tracks the `yolov8s` detection pipeline through exp 01–03. `geoclassifier`, exp 04, is a separate model/track and isn't part of the same optimisation arc.)
+
 ## Benchmark summary
 
 | Exp | Scope | Configuration | p50 @c=1 | Peak throughput | Saturates at |
@@ -183,8 +189,12 @@ From first pipeline to final: **+34% throughput** (59 → 79 inf/s) and **-30% l
 | 02 | postprocess | Python (isolated) | 6.6ms | 332 inf/s | c=5 |
 | 03 | model | ONNX, no batching | 26.6ms | 58 inf/s | c=2 |
 | 03 | model | ONNX, dynamic batching | 28.0ms | 60 inf/s | c=6 |
+| 04 | model | Geoclassifier ONNX FP32 | 42ms | 26 inf/s | c=2 |
+| 04 | model | Geoclassifier TRT FP16 | 46ms | 35 inf/s | c=2 |
+| 04 | pipeline | Geoclassifier ONNX FP32 | 46ms | 26 inf/s | c=2 |
+| 04 | pipeline | Geoclassifier TRT FP16 | 58ms | 31 inf/s | c=3 |
 
-Input: 1280×720 JPEG, letterboxed to 640×640. Latency and throughput measured end-to-end from the client.
+Exp 01–03 input: 1280×720 JPEG, letterboxed to 640×640 (`yolov8s`). Exp 04 input: JPEG resized to 512×512 and center-cropped to 480×480 (`geoclassifier`). Latency and throughput measured end-to-end from the client.
 
 > **gRPC vs HTTP:** tested in exp 01 — no measurable difference in throughput or latency. Protocol overhead is negligible compared to preprocess and GPU compute time.
 
@@ -196,10 +206,12 @@ Model-only tests use `perf_analyzer` from the Triton SDK container. Pipeline tes
 # Model-only (inside SDK container)
 bash benchmarks/01_onnx_vs_trt/benchmark.sh yolov8s model
 bash benchmarks/03_dynamic_batching/benchmark.sh yolov8s_dynamic
+bash benchmarks/04_geoclassifier/benchmark.sh geoclassifier
 
 # Pipeline (from repo root on host)
 bash benchmarks/01_onnx_vs_trt/run_pipeline.sh
 bash benchmarks/02_cpp_backend/run_pipeline.sh
+bash benchmarks/04_geoclassifier/run_pipeline.sh
 ```
 
 Full methodology, raw numbers, and analysis in each experiment's `notes.md`.
